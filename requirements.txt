@@ -1,0 +1,7 @@
+pip install --upgrade pip setuptools wheel
+pip install langchain openai
+pip install crewai
+pip install langchain_groq
+pip install langchain_openai
+pip install 'crewai[tools]'
+pip install dotenv
