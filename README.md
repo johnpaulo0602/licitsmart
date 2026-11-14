@@ -1,107 +1,66 @@
-# LicitSmart - Análise Automatizada de Editais
+# LicitSmart — Análise de editais com agentes de IA
 
-Este projeto realiza a análise automatizada de editais em PDF, extraindo informações relevantes e comparando-as com o perfil de uma empresa para gerar um relatório detalhado com a porcentagem de chances de ganhar a licitação.
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![CrewAI](https://img.shields.io/badge/CrewAI-multi--agentes-FF5A50?style=flat-square)](https://www.crewai.com/)
+[![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=flat-square&logo=langchain&logoColor=white)](https://www.langchain.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4_Turbo-412991?style=flat-square&logo=openai&logoColor=white)](https://platform.openai.com/)
 
-## Pré-requisitos
+Projeto desenvolvido em um **hackathon** para resolver um problema real de empresas que participam de licitações públicas: editais são PDFs longos e heterogêneos, e decidir se vale a pena concorrer exige horas de leitura técnica.
 
-- **Python 3.10** ou superior instalado em seu sistema.
-- Conta na **OpenAI** com uma chave de API válida.
+O LicitSmart lê os editais automaticamente, extrai as informações que importam e compara as exigências com o perfil da empresa, gerando um **relatório de compatibilidade com a estimativa de chance de vitória**.
 
-## Passo a Passo para Configuração
+## Como funciona
 
-### 1. Clonar o Repositório
+Um pipeline sequencial de agentes com CrewAI processa cada PDF:
 
-Clone o repositório do projeto para o seu ambiente local:
+```mermaid
+flowchart LR
+    PDF[Edital em PDF] --> L[Agente Leitor<br/>busca semântica no PDF]
+    L -->|YAML estruturado| R[Agente Revisor<br/>valida contra o template]
+    R -->|YAML revisado| A[Agente Analista<br/>compara com o perfil da empresa]
+    P[Perfil da empresa] --> A
+    A --> REL[Relatório .md<br/>com % de chance]
+```
+
+1. **Leitor de Editais**: usa o `PDFSearchTool` (RAG sobre o PDF) para extrair objetivos, exigências técnicas e documentais, oportunidades, prazos, limitações, recomendações e inconsistências do edital, em um YAML padronizado.
+2. **Revisor**: confere se o YAML segue o template e se todos os pontos solicitados foram atendidos.
+3. **Analista de Compatibilidade**: cruza o edital com o perfil da empresa (certificações, experiência, porte, capacidade financeira) e gera o relatório final, com pontos fortes, pontos fracos, recomendações e percentual de chance.
+
+O prompt usa blocos delimitados (`<solicitacoes>`, `<template>`, `<controle>`, `<restricoes>`) para controlar o formato, o tom e o escopo da saída.
+
+Um exemplo de relatório gerado está em [`relatorio.md`](./relatorio.md), a partir do edital de exemplo em [`PDFs/`](./PDFs).
+
+## Arquivos
+
+| Arquivo | O que faz |
+|---|---|
+| `script.py` | Pipeline completo: leitura, revisão e análise de compatibilidade com o perfil da empresa |
+| `script_v2.py` | Versão só de extração: leitura e revisão do edital, sem a análise de compatibilidade |
+| `PDFs/` | Editais a analisar |
+| `relatorio.md` | Exemplo de saída |
+
+## Como rodar
+
+Pré-requisitos: Python 3.10+ e uma chave da OpenAI com acesso ao GPT-4.
 
 ```bash
 git clone https://github.com/johnpaulo0602/licitsmart.git
-```
-
-### 2. Navegar para o Diretório do Projeto
-
-```bash
 cd licitsmart
-```
-
-### 3. Criar um Ambiente Virtual
-
-Crie um ambiente virtual para isolar as dependências do projeto:
-
-```bash
-python -m venv venv
-```
-
-Ative o ambiente virtual:
-
-- **No Windows:**
-
-  ```bash
-  venv\Scripts\activate
-  ```
-
-- **No Linux/MacOS:**
-
-  ```bash
-  source venv/bin/activate
-  ```
-
-### 4. Instalar as Dependências
-
-Instale as bibliotecas necessárias usando o arquivo `requirements.txt`:
-
-```bash
+python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+echo "OPENAI_API_KEY=sua-chave" > .env
 ```
 
-### 5. Configurar a Chave de API da OpenAI
-
-Crie um arquivo `.env` na raiz do projeto e adicione sua chave de API da OpenAI:
-
-```env
-OPENAI_API_KEY=your-openai-api-key
-```
-
-Substitua `your-openai-api-key` pela sua chave de API real.
-
-### 6. Preparar os Arquivos PDF
-
-Coloque os arquivos PDF dos editais que deseja analisar na pasta `PDFs` na raiz do projeto. Se a pasta não existir, crie-a:
-
-```bash
-mkdir PDFs
-```
-
-### 7. Executar o Script
-
-Execute o script principal:
+Coloque os editais em `PDFs/`, ajuste o perfil da empresa no início do `script.py` e execute:
 
 ```bash
 python script.py
 ```
 
-Os resultados serão salvos em arquivos `.md` correspondentes a cada edital analisado.
+Cada edital gera um arquivo `<nome-do-edital>_relatorio.md`.
 
-## Arquivos Importantes
+## Limitações conhecidas
 
-- `script.py`: Script principal que realiza a análise dos editais.
-- `requirements.txt`: Lista das dependências necessárias para o projeto.
-- `.env`: Arquivo que contém a variável de ambiente com a chave de API da OpenAI.
-- `PDFs/`: Diretório que deve conter os arquivos PDF dos editais.
-
-## Conteúdo do `requirements.txt`
-
-O arquivo `requirements.txt` deve conter as seguintes bibliotecas:
-
-```txt
-crewai
-crewai-tools
-python-dotenv
-langchain
-openai
-PyYAML
-```
-
-## Observações
-
-- Certifique-se de que sua chave de API da OpenAI está ativa e tem permissões para usar o modelo GPT-4.
-- Verifique se todos os arquivos necessários estão nos diretórios corretos.
+- Protótipo de hackathon: o perfil da empresa fica fixo no código, e não há interface nem testes.
+- A porcentagem de chance é uma estimativa do modelo, não um cálculo determinístico.
+- O custo e o tempo crescem com o tamanho do edital, porque cada PDF passa por três agentes.
